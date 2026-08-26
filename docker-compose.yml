@@ -15,3 +15,11 @@ services:
       POSTGRES_PASSWORD: jobpass
     ports:
       - "5433:5432"
+  application-db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: applicationdb
+      POSTGRES_USER: appuser
+      POSTGRES_PASSWORD: apppass
+    ports:
+        - "5434:5432"
