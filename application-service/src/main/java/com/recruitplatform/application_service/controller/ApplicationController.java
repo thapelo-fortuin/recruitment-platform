@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-@RestController @RequestMapping("/api/applications")
+@RestController @RequestMapping("/api/v1/applications")
 public class ApplicationController {
     private final ApplicationRepository applicationRepository;
     private final JobServiceClient jobServiceClient;

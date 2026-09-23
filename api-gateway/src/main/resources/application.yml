@@ -10,19 +10,26 @@ spring:
         webmvc:
           routes:
             - id: auth-service
-              uri: http://localhost:8081
+              uri: http://auth-service:8081
               predicates:
-                - Path=/api/auth/**
-            - id: auth-service
-              uri: http://localhost:8082
+                - Path=/api/v1/auth/**
+            - id: auth-service-health
+              uri: http://auth-service:8081
               predicates:
-                - Path=/api/auth/**
-
+                - Path=/actuator/**
+            - id: job-service
+              uri: http://job-service:8082
+              predicates:
+                - Path=/api/v1/jobs/**
             - id: application-service
-              uri: http://localhost:8083
+              uri: http://application-service:8083
               predicates:
-                - Path=/api/applications/**
+                - Path=/api/v1/applications/**
 
 jwt:
   secret: this-is-a-development-secret-key-change-it-later-1234567890
   expiration-ms: 3600000
+eureka:
+  client:
+    service-url:
+      defaultZone: http://eureka-server:8761/eureka/

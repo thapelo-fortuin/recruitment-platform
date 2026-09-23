@@ -8,7 +8,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Optional;
-@RestController @RequestMapping("/api/jobs")
+@RestController @RequestMapping("/api/v1/jobs")
 public class JobController {
     private final JobRepository jobRepository;
     public JobController(JobRepository jobRepository) { this.jobRepository = jobRepository; }

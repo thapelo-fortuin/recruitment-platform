@@ -26,7 +26,7 @@ public class JwtAuthFilter implements Filter {
         String path = request.getRequestURI();
 
         // Let login/register through untouched
-        if (path.startsWith("/api/auth/")) {
+        if (path.startsWith("/api/v1/auth/")) {
             chain.doFilter(req, res);
             return;
         }

@@ -10,7 +10,7 @@ import java.util.Map;
         this.restClient = RestClient.builder().baseUrl(jobServiceUrl).build();
     }
     public Map<String, Object> getJob(Long jobId, String authHeader) {
-        try { return restClient.get() .uri("/api/jobs/{id}", jobId) .header("Authorization", authHeader) .retrieve() .body(Map.class);
+        try { return restClient.get() .uri("/api/v1/jobs/{id}", jobId) .header("Authorization", authHeader) .retrieve() .body(Map.class);
         } catch (HttpClientErrorException.NotFound e) {
             return null;
         }

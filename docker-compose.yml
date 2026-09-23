@@ -1,4 +1,9 @@
 services:
+  eureka-server:
+    build: ./eureka-server
+    ports:
+      - "8761:8761"
+
   auth-db:
     image: postgres:16
     environment:
@@ -7,6 +12,7 @@ services:
       POSTGRES_PASSWORD: authpass
     ports:
       - "5432:5432"
+
   job-db:
     image: postgres:16
     environment:
@@ -15,6 +21,7 @@ services:
       POSTGRES_PASSWORD: jobpass
     ports:
       - "5433:5432"
+
   application-db:
     image: postgres:16
     environment:
@@ -22,4 +29,77 @@ services:
       POSTGRES_USER: appuser
       POSTGRES_PASSWORD: apppass
     ports:
-        - "5434:5432"
+      - "5434:5432"
+  soc-db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: socdb
+      POSTGRES_USER: socuser
+      POSTGRES_PASSWORD: socpass
+    ports:
+      - "5435:5432"
+
+  neo4j:
+    image: neo4j:5
+    environment:
+      NEO4J_AUTH: neo4j/neo4jpassword
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+
+  auth-service:
+    build: ./auth-service
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://auth-db:5432/authdb
+    depends_on:
+      - auth-db
+      - eureka-server
+
+  job-service:
+    build: ./job-service
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://job-db:5432/jobdb
+    depends_on:
+      - job-db
+      - eureka-server
+
+  application-service:
+    build: ./application-service
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://application-db:5432/applicationdb
+      AUTH_SERVICE_URL: http://auth-service:8081
+      JOB_SERVICE_URL: http://job-service:8082
+    depends_on:
+      - application-db
+      - auth-service
+      - job-service
+      - eureka-server
+
+  soc-service:
+    build: ./soc-service
+    ports:
+      - "8084:8084"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://soc-db:5432/socdb
+      SPRING_DATASOURCE_USERNAME: socuser
+      SPRING_DATASOURCE_PASSWORD: socpass
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+    depends_on:
+      - soc-db
+      - neo4j
+      - eureka-server
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - "8080:8080"
+    depends_on:
+      - auth-service
+      - job-service
+      - application-service
+      - eureka-server
