@@ -18,7 +18,11 @@ import java.util.UUID;
         }
         Event saved = eventRepository.save(event);
         return ResponseEntity.ok(saved); }
-    @GetMapping public List<Event> getAll() {
-        return eventRepository.findAll();
+    @GetMapping
+    public List<Event> getAll(@RequestParam(required = false) String eventType) {
+        if (eventType == null || eventType.isBlank()) {
+            return eventRepository.findAllByOrderByTimestampDesc();
+        }
+        return eventRepository.findByEventTypeOrderByTimestampDesc(eventType);
     }
 }

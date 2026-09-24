@@ -6,4 +6,6 @@ import java.util.List;
 public interface EventRepository extends JpaRepository<Event, String> {
     List<Event> findByUserIdAndEventTypeAndTimestampAfter(String userId, String eventType, LocalDateTime after);
     List<Event> findByServiceNameAndTimestampAfter(String serviceName, LocalDateTime after);
+    List<Event> findAllByOrderByTimestampDesc();
+    List<Event> findByEventTypeOrderByTimestampDesc(String eventType);
 }

@@ -63,4 +63,6 @@ import java.time.LocalDateTime;
     public String getCorrelationId() { return correlationId; }
     public void setCorrelationId(String correlationId) { this.correlationId = correlationId; }
     public String getAffectedEntity() { return affectedEntity; }
-    public void setAffectedEntity(String affectedEntity) { this.affectedEntity = affectedEntity; } }
+    public void setAffectedEntity(String affectedEntity) { this.affectedEntity = affectedEntity; }
+
+}
