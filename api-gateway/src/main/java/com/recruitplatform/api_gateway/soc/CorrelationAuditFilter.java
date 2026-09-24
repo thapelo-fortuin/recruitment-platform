@@ -9,7 +9,8 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.Collections;
@@ -27,7 +28,7 @@ public class CorrelationAuditFilter extends OncePerRequestFilter {
     private static final String SERVICE_NAME = "api-gateway";
 
     private final SocEventClient socClient;
-
+    public static final String CLIENT_IP_HEADER = "X-Client-Ip";
     public CorrelationAuditFilter(SocEventClient socClient) {
         this.socClient = socClient;
     }
@@ -51,7 +52,10 @@ public class CorrelationAuditFilter extends OncePerRequestFilter {
         response.setHeader(HEADER, correlationId);
 
         try {
-            chain.doFilter(new CorrelationRequestWrapper(request, correlationId), response);
+            Map<String, String> extra = new LinkedHashMap<>();
+            extra.put(HEADER, correlationId);
+            extra.put(CLIENT_IP_HEADER, clientIp(request));
+            chain.doFilter(new ExtraHeadersRequestWrapper(request, extra), response);
         } finally {
             report(request, response.getStatus(), correlationId);
         }
@@ -108,40 +112,45 @@ public class CorrelationAuditFilter extends OncePerRequestFilter {
     }
 
     /** Servlet request headers are read-only, so we wrap the request to add our header. */
-    private static class CorrelationRequestWrapper extends HttpServletRequestWrapper {
+    private static class ExtraHeadersRequestWrapper extends HttpServletRequestWrapper {
 
-        private final String correlationId;
+        private final Map<String, String> extra;
 
-        CorrelationRequestWrapper(HttpServletRequest request, String correlationId) {
+        ExtraHeadersRequestWrapper(HttpServletRequest request, Map<String, String> extra) {
             super(request);
-            this.correlationId = correlationId;
+            this.extra = extra;
+        }
+
+        private String lookup(String name) {
+            for (Map.Entry<String, String> e : extra.entrySet()) {
+                if (e.getKey().equalsIgnoreCase(name)) {
+                    return e.getValue();
+                }
+            }
+            return null;
         }
 
         @Override
         public String getHeader(String name) {
-            if (HEADER.equalsIgnoreCase(name)) {
-                return correlationId;
-            }
-            return super.getHeader(name);
+            String value = lookup(name);
+            return value != null ? value : super.getHeader(name);
         }
 
         @Override
         public Enumeration<String> getHeaders(String name) {
-            if (HEADER.equalsIgnoreCase(name)) {
-                return Collections.enumeration(List.of(correlationId));
-            }
-            return super.getHeaders(name);
+            String value = lookup(name);
+            return value != null ? Collections.enumeration(List.of(value)) : super.getHeaders(name);
         }
 
         @Override
         public Enumeration<String> getHeaderNames() {
             Set<String> names = new LinkedHashSet<>();
             for (String n : Collections.list(super.getHeaderNames())) {
-                if (!HEADER.equalsIgnoreCase(n)) {
+                if (lookup(n) == null) {
                     names.add(n);
                 }
             }
-            names.add(HEADER);
+            names.addAll(extra.keySet());
             return Collections.enumeration(names);
         }
     }
