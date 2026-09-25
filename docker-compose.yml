@@ -77,6 +77,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://application-db:5432/applicationdb
       AUTH_SERVICE_URL: http://auth-service:8081
       JOB_SERVICE_URL: http://job-service:8082
+      SOC_URL: http://soc-service:8084
     depends_on:
       - application-db
       - auth-service
