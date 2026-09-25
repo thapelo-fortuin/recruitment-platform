@@ -8,4 +8,9 @@ public interface EventRepository extends JpaRepository<Event, String> {
     List<Event> findByServiceNameAndTimestampAfter(String serviceName, LocalDateTime after);
     List<Event> findAllByOrderByTimestampDesc();
     List<Event> findByEventTypeOrderByTimestampDesc(String eventType);
+    List<Event> findBySourceIpAndEventTypeAndTimestampAfter(String sourceIp, String eventType, LocalDateTime after);
+
+    List<Event> findByEndpointAndEventTypeInAndTimestampAfter(String endpoint, List<String> eventTypes, LocalDateTime after);
+
+    List<Event> findByServiceNameAndEventTypeAndTimestampAfter(String serviceName, String eventType, LocalDateTime after);
 }
