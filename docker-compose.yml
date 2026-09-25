@@ -64,6 +64,7 @@ services:
       - "8082:8082"
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://job-db:5432/jobdb
+      SOC_URL: http://soc-service:8084
     depends_on:
       - job-db
       - eureka-server
