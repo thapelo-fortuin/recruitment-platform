@@ -61,6 +61,12 @@ public class GraphSeeder implements CommandLineRunner {
         for (String service : new String[]{"api-gateway", "auth-service", "job-service", "application-service", "soc-service"}) {
             merge("Asset", "name", service, "type", "microservice");
             relate("Service", "name", service, "IS_A", "Asset", "name", service);
+            // Dependency relationships, mirroring real inter-service calls and compose depends_on
+            relate("Service", "name", "api-gateway", "DEPENDS_ON", "Service", "name", "auth-service");
+            relate("Service", "name", "api-gateway", "DEPENDS_ON", "Service", "name", "job-service");
+            relate("Service", "name", "api-gateway", "DEPENDS_ON", "Service", "name", "application-service");
+            relate("Service", "name", "application-service", "DEPENDS_ON", "Service", "name", "auth-service");
+            relate("Service", "name", "application-service", "DEPENDS_ON", "Service", "name", "job-service");
         }
 
         // Roles from your app
