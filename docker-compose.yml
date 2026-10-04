@@ -88,11 +88,19 @@ services:
     build: ./soc-service
     ports:
       - "8084:8084"
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -q --spider http://localhost:7474 || exit 1" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://soc-db:5432/socdb
       SPRING_DATASOURCE_USERNAME: socuser
       SPRING_DATASOURCE_PASSWORD: socpass
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SPRING_NEO4J_URI: bolt://neo4j:7687
+      SPRING_NEO4J_AUTHENTICATION_USERNAME: neo4j
+      SPRING_NEO4J_AUTHENTICATION_PASSWORD: neo4jpassword
     depends_on:
       - soc-db
       - neo4j

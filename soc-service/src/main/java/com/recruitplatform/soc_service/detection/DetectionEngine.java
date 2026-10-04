@@ -1,5 +1,6 @@
 package com.recruitplatform.soc_service.detection;
 
+import com.recruitplatform.soc_service.graph.GraphSyncService;
 import com.recruitplatform.soc_service.model.Alert;
 import com.recruitplatform.soc_service.model.Event;
 import com.recruitplatform.soc_service.repository.AlertRepository;
@@ -28,10 +29,12 @@ public class DetectionEngine {
 
     private final EventRepository eventRepository;
     private final AlertRepository alertRepository;
+    private final GraphSyncService graphSyncService;
 
-    public DetectionEngine(EventRepository eventRepository, AlertRepository alertRepository) {
+    public DetectionEngine(EventRepository eventRepository, AlertRepository alertRepository, GraphSyncService graphSyncService) {
         this.eventRepository = eventRepository;
         this.alertRepository = alertRepository;
+        this.graphSyncService = graphSyncService;
     }
 
     @Scheduled(fixedDelay = 15000) // every 15 seconds
@@ -74,6 +77,7 @@ public class DetectionEngine {
             alert.setAffectedIp(userFailures.get(userFailures.size() - 1).getSourceIp());
             alert.setRelatedEvents(idsOf(userFailures));
             alertRepository.save(alert);
+            graphSyncService.syncAlert(alert);
             log.warn("ALERT raised: {} for user {}", alert.getRuleName(), userId);
         }
     }
@@ -86,8 +90,6 @@ public class DetectionEngine {
     private void detectRepeatedUnauthorised() {
         LocalDateTime window = LocalDateTime.now().minusMinutes(5);
 
-        // the finder above needs a concrete endpoint, so instead we scan recent events grouped by endpoint;
-        // simplest correct approach: reuse findByServiceNameAndEventTypeAndTimestampAfter per known service
         for (String service : List.of("api-gateway", "job-service", "application-service", "auth-service")) {
             List<Event> serviceEvents = eventRepository.findByServiceNameAndEventTypeAndTimestampAfter(
                     service, "UNAUTHORISED_ACCESS", window);
@@ -117,6 +119,7 @@ public class DetectionEngine {
                 alert.setAffectedIp(hits.get(hits.size() - 1).getSourceIp());
                 alert.setRelatedEvents(idsOf(hits));
                 alertRepository.save(alert);
+                graphSyncService.syncAlert(alert);
                 log.warn("ALERT raised: {} for endpoint {}", alert.getRuleName(), endpoint);
             }
         }
@@ -143,8 +146,6 @@ public class DetectionEngine {
             if (alertRepository.existsByRuleNameAndAffectedServiceAndCreatedAtAfter(
                     "ABNORMAL_REQUEST_RATE", "api-gateway", LocalDateTime.now().minusMinutes(COOLDOWN_MINUTES))) {
                 continue;
-            }{
-                // see note below the code block
             }
 
             Alert alert = newAlert("ABNORMAL_REQUEST_RATE", "HIGH",
@@ -154,6 +155,7 @@ public class DetectionEngine {
             alert.setAffectedIp(ip);
             alert.setRelatedEvents(idsOf(hits.subList(0, Math.min(hits.size(), 20)))); // cap stored IDs
             alertRepository.save(alert);
+            graphSyncService.syncAlert(alert);
             log.warn("ALERT raised: {} for IP {}", alert.getRuleName(), ip);
         }
     }
@@ -180,6 +182,7 @@ public class DetectionEngine {
             alert.setAffectedService(service);
             alert.setRelatedEvents(idsOf(errors));
             alertRepository.save(alert);
+            graphSyncService.syncAlert(alert);
             log.warn("ALERT raised: {} for service {}", alert.getRuleName(), service);
         }
     }
