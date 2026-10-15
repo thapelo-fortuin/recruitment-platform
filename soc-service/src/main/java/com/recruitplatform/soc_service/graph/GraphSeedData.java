@@ -9,6 +9,7 @@ public class GraphSeedData {
             "MULTIPLE_FAILED_LOGINS", "Credential Attack",
             "REPEATED_UNAUTHORISED_ACCESS", "Broken Access Control",
             "ABNORMAL_REQUEST_RATE", "Denial of Service",
-            "REPEATED_SERVICE_ERRORS", "Service Disruption"
+            "REPEATED_SERVICE_ERRORS", "Service Disruption",
+            "SERVICE_HEALTH_FAILURE", "Service Disruption"
     );
 }

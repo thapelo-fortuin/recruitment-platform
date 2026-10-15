@@ -43,6 +43,7 @@ public class DetectionEngine {
         detectRepeatedUnauthorised();
         detectRequestSpike();
         detectServiceFailure();
+        detectHealthFailure();
     }
 
     // Rule 1: Multiple failed logins
@@ -181,6 +182,39 @@ public class DetectionEngine {
                     "Check " + service + "'s logs and health endpoint; consider restarting it");
             alert.setAffectedService(service);
             alert.setRelatedEvents(idsOf(errors));
+            alertRepository.save(alert);
+            graphSyncService.syncAlert(alert);
+            log.warn("ALERT raised: {} for service {}", alert.getRuleName(), service);
+        }
+    }
+
+    // Rule 5: Service health transition
+    // Purpose: create an alert when the SOC health monitor observes an unavailable service.
+    // Input events: SERVICE_HEALTH_FAILURE from soc-health-monitor.
+    // Logic: one failed probe creates an alert; the monitor emits only on state transitions.
+    // Severity: HIGH. Response: inspect service health, logs, and dependencies.
+    private void detectHealthFailure() {
+        LocalDateTime window = LocalDateTime.now().minusMinutes(5);
+        List<Event> failures = eventRepository.findByServiceNameAndEventTypeAndTimestampAfter(
+                "soc-health-monitor", "SERVICE_HEALTH_FAILURE", window);
+
+        Map<String, List<Event>> byService = failures.stream()
+                .filter(event -> event.getAffectedEntity() != null)
+                .collect(Collectors.groupingBy(Event::getAffectedEntity));
+
+        for (Map.Entry<String, List<Event>> entry : byService.entrySet()) {
+            String service = entry.getKey();
+            if (alertRepository.existsByRuleNameAndAffectedServiceAndCreatedAtAfter(
+                    "SERVICE_HEALTH_FAILURE", service, LocalDateTime.now().minusMinutes(COOLDOWN_MINUTES))) {
+                continue;
+            }
+
+            List<Event> serviceFailures = entry.getValue();
+            Alert alert = newAlert("SERVICE_HEALTH_FAILURE", "HIGH",
+                    service + " failed a service health probe",
+                    "Inspect " + service + " health, logs, and dependencies; restore service availability.");
+            alert.setAffectedService(service);
+            alert.setRelatedEvents(idsOf(serviceFailures));
             alertRepository.save(alert);
             graphSyncService.syncAlert(alert);
             log.warn("ALERT raised: {} for service {}", alert.getRuleName(), service);

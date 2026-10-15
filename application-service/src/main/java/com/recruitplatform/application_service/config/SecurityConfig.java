@@ -12,9 +12,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     }
     @Bean public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http .csrf(csrf -> csrf.disable()) .authorizeHttpRequests(auth -> auth .requestMatchers("/actuator/**", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll() .requestMatchers(HttpMethod.POST,
+        http .csrf(csrf -> csrf.disable()) .authorizeHttpRequests(auth -> auth .requestMatchers("/health", "/actuator/**", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll() .requestMatchers(HttpMethod.POST,
                 "/api/v1/applications").hasRole("CANDIDATE") .requestMatchers(HttpMethod.PUT,
                 "/api/v1/applications/**").hasRole("RECRUITER") .requestMatchers(HttpMethod.GET,
+                "/api/v1/applications/recruiter").hasRole("RECRUITER") .requestMatchers(HttpMethod.GET,
                 "/api/v1/applications/**").authenticated() .anyRequest().authenticated() ) .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }

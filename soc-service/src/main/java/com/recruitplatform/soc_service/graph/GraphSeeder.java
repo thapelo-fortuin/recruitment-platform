@@ -24,13 +24,28 @@ public class GraphSeeder implements CommandLineRunner {
 
         // Threats, referencing real MITRE ATT&CK technique IDs where applicable
         merge("Threat", "name", "Credential Attack",
-                "mitreId", "T1110", "description", "Brute Force: repeated attempts to guess valid credentials");
+                "mitreId", "T1110", "description", "Brute Force: repeated attempts to guess valid credentials",
+                "sourceUrl", "https://attack.mitre.org/techniques/T1110/");
         merge("Threat", "name", "Broken Access Control",
-                "mitreId", "T1078", "description", "Valid Accounts: use of stolen or unauthorised credentials/permissions to access resources");
+                "mitreId", "T1078", "description", "Valid Accounts: use of stolen or unauthorised credentials/permissions to access resources",
+                "sourceUrl", "https://attack.mitre.org/techniques/T1078/");
         merge("Threat", "name", "Denial of Service",
-                "mitreId", "T1499", "description", "Endpoint Denial of Service: flooding a service with requests to degrade availability");
+                "mitreId", "T1499", "description", "Endpoint Denial of Service: flooding a service with requests to degrade availability",
+                "sourceUrl", "https://attack.mitre.org/techniques/T1499/");
         merge("Threat", "name", "Service Disruption",
-                "mitreId", "T1499.004", "description", "Application Exhaustion Flood: causing repeated application-level errors/failures");
+                "mitreId", "T1499.004", "description", "Application Exhaustion Flood: causing repeated application-level errors/failures",
+                "sourceUrl", "https://attack.mitre.org/techniques/T1499/004/");
+
+        // Security weaknesses are explicitly represented so threat-to-vulnerability paths are queryable.
+        merge("Vulnerability", "cweId", "CWE-521", "name", "Weak Password Requirements",
+                "description", "Weak password requirements can make accounts easier to compromise.",
+                "sourceUrl", "https://cwe.mitre.org/data/definitions/521.html");
+        merge("Vulnerability", "cweId", "CWE-284", "name", "Improper Access Control",
+                "description", "Access-control weaknesses can allow unauthorized access to protected resources.",
+                "sourceUrl", "https://cwe.mitre.org/data/definitions/284.html");
+        merge("Vulnerability", "cweId", "CWE-400", "name", "Uncontrolled Resource Consumption",
+                "description", "Uncontrolled resource consumption can reduce service availability.",
+                "sourceUrl", "https://cwe.mitre.org/data/definitions/400.html");
 
         // Controls
         merge("Control", "name", "Account Lockout", "description", "Temporarily lock an account after repeated failed logins");
@@ -46,16 +61,31 @@ public class GraphSeeder implements CommandLineRunner {
                 "content", "1. Identify offending IP(s). 2. Apply rate limiting or a temporary block. 3. Scale or restart affected service if needed.");
 
         // Mitigations: which controls address which threats
-        relate("Threat", "name", "Credential Attack", "MITIGATED_BY", "Control", "name", "Account Lockout");
-        relate("Threat", "name", "Credential Attack", "MITIGATED_BY", "Control", "name", "Multi-Factor Authentication");
-        relate("Threat", "name", "Broken Access Control", "MITIGATED_BY", "Control", "name", "Rate Limiting");
-        relate("Threat", "name", "Denial of Service", "MITIGATED_BY", "Control", "name", "Rate Limiting");
-        relate("Threat", "name", "Service Disruption", "MITIGATED_BY", "Control", "name", "Health Monitoring");
-        relate("Threat", "name", "Service Disruption", "MITIGATED_BY", "Control", "name", "Input Validation");
+        relate("Control", "name", "Account Lockout", "MITIGATES", "Threat", "name", "Credential Attack");
+        relate("Control", "name", "Multi-Factor Authentication", "MITIGATES", "Threat", "name", "Credential Attack");
+        relate("Control", "name", "Rate Limiting", "MITIGATES", "Threat", "name", "Broken Access Control");
+        relate("Control", "name", "Rate Limiting", "MITIGATES", "Threat", "name", "Denial of Service");
+        relate("Control", "name", "Health Monitoring", "MITIGATES", "Threat", "name", "Service Disruption");
+        relate("Control", "name", "Input Validation", "MITIGATES", "Threat", "name", "Service Disruption");
 
         // Procedures document how to respond to each threat
-        relate("Threat", "name", "Credential Attack", "DOCUMENTED_IN", "Document", "name", "Credential Attack Response Runbook");
-        relate("Threat", "name", "Denial of Service", "DOCUMENTED_IN", "Document", "name", "DoS Response Runbook");
+        relate("Document", "name", "Credential Attack Response Runbook", "SUPPORTS_RESPONSE_TO", "Threat", "name", "Credential Attack");
+        relate("Document", "name", "DoS Response Runbook", "SUPPORTS_RESPONSE_TO", "Threat", "name", "Denial of Service");
+        relate("Document", "name", "Credential Attack Response Runbook", "DESCRIBES", "Control", "name", "Account Lockout");
+        relate("Document", "name", "Credential Attack Response Runbook", "DESCRIBES", "Control", "name", "Multi-Factor Authentication");
+        relate("Document", "name", "DoS Response Runbook", "DESCRIBES", "Control", "name", "Rate Limiting");
+
+        relate("Threat", "name", "Credential Attack", "EXPLOITS", "Vulnerability", "cweId", "CWE-521");
+        relate("Threat", "name", "Broken Access Control", "EXPLOITS", "Vulnerability", "cweId", "CWE-284");
+        relate("Threat", "name", "Denial of Service", "EXPLOITS", "Vulnerability", "cweId", "CWE-400");
+        relate("Threat", "name", "Service Disruption", "EXPLOITS", "Vulnerability", "cweId", "CWE-400");
+
+        relate("Threat", "name", "Credential Attack", "TARGETS", "Service", "name", "auth-service");
+        relate("Threat", "name", "Broken Access Control", "TARGETS", "Service", "name", "auth-service");
+        relate("Threat", "name", "Broken Access Control", "TARGETS", "Service", "name", "application-service");
+        relate("Threat", "name", "Denial of Service", "TARGETS", "Service", "name", "api-gateway");
+        relate("Threat", "name", "Denial of Service", "TARGETS", "Service", "name", "job-service");
+        relate("Threat", "name", "Service Disruption", "TARGETS", "Service", "name", "application-service");
 
         // Assets: your five services, as things worth protecting
         for (String service : new String[]{"api-gateway", "auth-service", "job-service", "application-service", "soc-service"}) {
@@ -69,9 +99,19 @@ public class GraphSeeder implements CommandLineRunner {
             relate("Service", "name", "application-service", "DEPENDS_ON", "Service", "name", "job-service");
         }
 
+        expose("api-gateway", "/api/v1/auth/login");
+        expose("api-gateway", "/api/v1/jobs");
+        expose("api-gateway", "/api/v1/applications");
+        expose("auth-service", "/api/v1/auth/login");
+        expose("auth-service", "/api/v1/auth/register");
+        expose("job-service", "/api/v1/jobs");
+        expose("application-service", "/api/v1/applications");
+        expose("soc-service", "/api/v1/rag/ask");
+
         // Roles from your app
         merge("Role", "name", "CANDIDATE");
         merge("Role", "name", "RECRUITER");
+        merge("Role", "name", "ADMIN");
 
         log.info("Graph seeding complete.");
     }
@@ -100,5 +140,10 @@ public class GraphSeeder implements CommandLineRunner {
                 .bind(fromValue).to("from")
                 .bind(toValue).to("to")
                 .run();
+    }
+
+    private void expose(String service, String endpoint) {
+        merge("Endpoint", "path", endpoint, "name", endpoint);
+        relate("Service", "name", service, "EXPOSES", "Endpoint", "path", endpoint);
     }
 }

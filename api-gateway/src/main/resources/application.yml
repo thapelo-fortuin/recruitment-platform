@@ -25,6 +25,12 @@ spring:
               uri: http://application-service:8083
               predicates:
                 - Path=/api/v1/applications/**
+            - id: soc-admin
+              uri: http://soc-service:8084
+              predicates:
+                - Path=/api/v1/soc/**
+              filters:
+                - RewritePath=/api/v1/soc/(?<segment>.*), /api/v1/$\{segment}
 
 jwt:
   secret: this-is-a-development-secret-key-change-it-later-1234567890

@@ -4,6 +4,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 import java.util.Map;
+import java.util.List;
 @Component public class JobServiceClient {
     private final RestClient restClient;
     public JobServiceClient(@Value("${job-service.url}") String jobServiceUrl) {
@@ -14,5 +15,12 @@ import java.util.Map;
         } catch (HttpClientErrorException.NotFound e) {
             return null;
         }
+    }
+    public List<Map<String, Object>> getJobs(String authHeader) {
+        return restClient.get()
+                .uri("/api/v1/jobs")
+                .header("Authorization", authHeader)
+                .retrieve()
+                .body(List.class);
     }
 }

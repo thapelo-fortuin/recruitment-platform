@@ -25,8 +25,10 @@ public class JwtAuthFilter implements Filter {
         HttpServletResponse response = (HttpServletResponse) res;
         String path = request.getRequestURI();
 
-        // Let login/register through untouched
-        if (path.startsWith("/api/v1/auth/")) {
+        // Authentication endpoints and the public job catalogue are available before sign-in.
+        boolean publicJobRead = "GET".equalsIgnoreCase(request.getMethod())
+                && path.matches("^/api/v1/jobs(?:/\\d+)?$");
+        if ("/health".equals(path) || path.startsWith("/api/v1/auth/") || publicJobRead) {
             chain.doFilter(req, res);
             return;
         }
@@ -44,6 +46,13 @@ public class JwtAuthFilter implements Filter {
         if (!jwtUtil.isTokenValid(token)) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.getWriter().write("Invalid or expired token");
+            return;
+        }
+
+        // Security operations data is restricted to administrator accounts.
+        if (path.startsWith("/api/v1/soc/") && !"ADMIN".equals(jwtUtil.extractRole(token))) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            response.getWriter().write("Administrator access required");
             return;
         }
 

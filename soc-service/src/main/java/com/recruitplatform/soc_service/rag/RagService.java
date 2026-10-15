@@ -1,4 +1,4 @@
-package com.recruitplatform.soc_service.rag;
+v  package com.recruitplatform.soc_service.rag;
 
 import com.recruitplatform.soc_service.graph.GraphQueryService;
 import com.recruitplatform.soc_service.model.Alert;
@@ -45,7 +45,7 @@ public class RagService {
                 if (alertId == null) yield unresolvable(question, "No alert ID was given and no alert exists yet.");
                 var evidence = graphQueryService.controlsForAlert(alertId);
                 yield new RagResponse(question, AnswerTemplates.controlsForAlert(evidence),
-                        "Cypher: alert INDICATES threat MITIGATED_BY control, DOCUMENTED_IN procedure", evidence);
+                        "Cypher: alert INDICATES threat; controls MITIGATE threat; procedure SUPPORTS_RESPONSE_TO threat", evidence);
             }
             case DEPENDENCY_IMPACT -> {
                 String service = intent.service().orElse(null);
@@ -66,7 +66,7 @@ public class RagService {
                 if (alertId == null) yield unresolvable(question, "No alert ID was given and no alert exists yet.");
                 var evidence = graphQueryService.evidenceForAlert(alertId);
                 yield new RagResponse(question, AnswerTemplates.alertExplanation(evidence),
-                        "Cypher: full evidence trail — event TRIGGERED by user, CREATED_ALERT, INDICATES threat, MITIGATED_BY control",
+                        "Cypher: full evidence trail — user TRIGGERED event, event CREATED_ALERT, alert INDICATES threat, control MITIGATES threat, document SUPPORTS_RESPONSE_TO threat",
                         evidence);
             }
             case UNKNOWN -> unresolvable(question,

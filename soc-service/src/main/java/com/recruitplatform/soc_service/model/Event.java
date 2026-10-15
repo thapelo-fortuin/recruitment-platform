@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
     @Column(nullable = false) private String eventType;
     @Column(nullable = false) private String severity;
     private String userId;
+    private String userRole;
     private String sourceIp;
     private String endpoint;
     private String httpMethod;
@@ -50,6 +51,8 @@ import java.time.LocalDateTime;
         return userId;
     }
     public void setUserId(String userId) { this.userId = userId; }
+    public String getUserRole() { return userRole; }
+    public void setUserRole(String userRole) { this.userRole = userRole; }
     public String getSourceIp() { return sourceIp; }
     public void setSourceIp(String sourceIp) { this.sourceIp = sourceIp; }
     public String getEndpoint() { return endpoint; }

@@ -8,6 +8,8 @@ import org.springframework.data.neo4j.core.Neo4jClient;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
 @Service
@@ -26,14 +28,19 @@ public class GraphSyncService {
             neo4jClient.query("""
                 MERGE (e:Event {eventId: $eventId})
                 SET e.eventType = $eventType, e.severity = $severity, e.timestamp = $timestamp,
-                    e.statusCode = $statusCode, e.correlationId = $correlationId
+                    e.statusCode = $statusCode, e.correlationId = $correlationId,
+                    e.httpMethod = $httpMethod, e.sourceIp = $sourceIp,
+                    e.message = $message, e.affectedEntity = $affectedEntity,
+                    e.userRole = $userRole
                 MERGE (s:Service {name: $serviceName})
+                MERGE (e)-[:GENERATED_BY]->(s)
                 MERGE (e)-[:OCCURRED_IN]->(s)
                 WITH e
                 CALL (e) {
                     WITH e
                     WHERE $endpoint IS NOT NULL
                     MERGE (ep:Endpoint {path: $endpoint})
+                    MERGE (e)-[:TARGETED]->(ep)
                     MERGE (e)-[:AT]->(ep)
                 }
                 CALL (e) {
@@ -41,6 +48,12 @@ public class GraphSyncService {
                     WHERE $userId IS NOT NULL
                     MERGE (u:User {id: $userId})
                     MERGE (u)-[:TRIGGERED]->(e)
+                    CALL (u) {
+                        WITH u
+                        WHERE $userRole IS NOT NULL
+                        MERGE (r:Role {name: $userRole})
+                        MERGE (u)-[:HAS_ROLE]->(r)
+                    }
                 }
                 """)
                     .bind(event.getEventId()).to("eventId")
@@ -49,6 +62,11 @@ public class GraphSyncService {
                     .bind(event.getTimestamp().toString()).to("timestamp")
                     .bind(event.getStatusCode()).to("statusCode")
                     .bind(event.getCorrelationId()).to("correlationId")
+                    .bind(event.getHttpMethod()).to("httpMethod")
+                    .bind(event.getSourceIp()).to("sourceIp")
+                    .bind(event.getMessage()).to("message")
+                    .bind(event.getAffectedEntity()).to("affectedEntity")
+                    .bind(event.getUserRole()).to("userRole")
                     .bind(event.getServiceName()).to("serviceName")
                     .bind(event.getEndpoint()).to("endpoint")
                     .bind(event.getUserId()).to("userId")
@@ -79,6 +97,12 @@ public class GraphSyncService {
                     MERGE (u:User {id: $affectedUser})
                     MERGE (a)-[:AFFECTS_USER]->(u)
                 }
+                CALL (a) {
+                    WITH a
+                    WHERE $affectedEndpoint IS NOT NULL
+                    MERGE (ep:Endpoint {path: $affectedEndpoint})
+                    MERGE (a)-[:AFFECTS_ENDPOINT]->(ep)
+                }
                 """)
                     .bind(alert.getAlertId()).to("alertId")
                     .bind(alert.getRuleName()).to("ruleName")
@@ -89,6 +113,7 @@ public class GraphSyncService {
                     .bind(alert.getCreatedAt().toString()).to("createdAt")
                     .bind(alert.getAffectedService()).to("affectedService")
                     .bind(alert.getAffectedUser()).to("affectedUser")
+                    .bind(alert.getAffectedEndpoint()).to("affectedEndpoint")
                     .run();
 
             // link this alert's related events, and to the threat its rule represents
@@ -112,6 +137,24 @@ public class GraphSyncService {
                         .bind(threatName).to("threatName")
                         .run();
             }
+
+            String serviceName = alert.getAffectedService() == null ? "platform" : alert.getAffectedService();
+            String incidentThreat = threatName == null ? "Security Incident" : threatName;
+            String incidentId = "inc-" + LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE)
+                    + "-" + slug(serviceName) + "-" + slug(incidentThreat);
+            neo4jClient.query("""
+                    MERGE (i:Incident {incidentId: $incidentId})
+                    ON CREATE SET i.title = $title, i.status = 'OPEN', i.createdAt = $createdAt
+                    SET i.updatedAt = $createdAt
+                    WITH i
+                    MATCH (a:Alert {alertId: $alertId})
+                    MERGE (i)-[:CONTAINS]->(a)
+                    """)
+                    .bind(incidentId).to("incidentId")
+                    .bind(serviceName + " / " + incidentThreat + " incident").to("title")
+                    .bind(alert.getCreatedAt().toString()).to("createdAt")
+                    .bind(alert.getAlertId()).to("alertId")
+                    .run();
         } catch (Exception ex) {
             log.warn("Could not sync alert {} to Neo4j: {}", alert.getAlertId(), ex.getMessage());
         }
@@ -120,5 +163,9 @@ public class GraphSyncService {
     private String[] splitIds(String relatedEvents) {
         if (relatedEvents == null || relatedEvents.isBlank()) return new String[0];
         return Arrays.stream(relatedEvents.split(",")).map(String::trim).toArray(String[]::new);
+    }
+
+    private String slug(String value) {
+        return value.toLowerCase().replaceAll("[^a-z0-9]+", "-").replaceAll("(^-|-$)", "");
     }
 }

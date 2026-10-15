@@ -47,7 +47,8 @@ public class AnswerTemplates {
             return "No threats have been linked to alerts on " + service + " yet.";
         }
         StringBuilder sb = new StringBuilder("Threats observed against " + service + ": ");
-        rows.forEach(r -> sb.append(r.get("threat")).append(" (MITRE ").append(r.get("mitreId")).append("), "));
+        rows.forEach(r -> sb.append(r.get("threat")).append(" (MITRE ").append(r.get("mitreId"))
+                .append("; related weaknesses: ").append(r.get("vulnerabilities")).append("), "));
         return sb.substring(0, sb.length() - 2) + ".";
     }
 
@@ -59,7 +60,9 @@ public class AnswerTemplates {
         return "Alert " + row.get("alertId") + " (" + row.get("ruleName") + ", " + row.get("severity")
                 + ") was created because: " + row.get("description")
                 + ". It indicates the threat(s) " + row.get("threats")
+                + ", linked weaknesses: " + row.get("vulnerabilities")
                 + ", mitigated by " + row.get("controls")
+                + ". Response procedures: " + row.get("procedures")
                 + ". Recommended action: " + row.get("recommendedAction") + ".";
     }
 }

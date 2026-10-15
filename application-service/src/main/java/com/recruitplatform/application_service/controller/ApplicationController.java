@@ -68,6 +68,16 @@ public class ApplicationController {
         return applicationRepository.findByCandidateEmail(authentication.getName());
     }
 
+    @GetMapping("/recruiter")
+    public List<Application> getApplicationsForRecruiter(Authentication authentication,
+                                                          @RequestHeader("Authorization") String authHeader) {
+        List<Long> ownJobIds = jobServiceClient.getJobs(authHeader).stream()
+                .filter(job -> authentication.getName().equals(job.get("postedByEmail")))
+                .map(job -> ((Number) job.get("id")).longValue())
+                .toList();
+        return ownJobIds.isEmpty() ? List.of() : applicationRepository.findByJobIdIn(ownJobIds);
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<?> getApplication(@PathVariable Long id) {
         Optional<Application> app = applicationRepository.findById(id);

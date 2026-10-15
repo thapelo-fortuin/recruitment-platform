@@ -5,5 +5,6 @@ import java.util.List;
 public interface ApplicationRepository extends JpaRepository<Application, Long> {
     List<Application> findByCandidateEmail(String candidateEmail);
     List<Application> findByJobId(Long jobId);
+    List<Application> findByJobIdIn(List<Long> jobIds);
     boolean existsByCandidateEmailAndJobId(String candidateEmail, Long jobId);
 }

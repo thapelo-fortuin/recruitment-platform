@@ -15,7 +15,7 @@ import java.io.IOException;
 @Order(Ordered.HIGHEST_PRECEDENCE)   // before Spring Security, so its 401/403 responses are visible
 public class ErrorAuditFilter extends OncePerRequestFilter {
 
-    private static final String SERVICE_NAME = "job-service";
+    private static final String SERVICE_NAME = "application-service";
 
     private final SocEventClient socClient;
 

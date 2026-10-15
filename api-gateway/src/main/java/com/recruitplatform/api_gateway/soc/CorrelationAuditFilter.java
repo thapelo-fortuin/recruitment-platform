@@ -12,7 +12,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.io.IOException;
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.LinkedHashSet;
@@ -79,7 +79,7 @@ public class CorrelationAuditFilter extends OncePerRequestFilter {
         String message = request.getMethod() + " " + path + " -> " + status;
 
         socClient.send(new SocEvent(
-                Instant.now().toString(),
+                LocalDateTime.now().toString(),
                 SERVICE_NAME,
                 eventType,
                 severity,
