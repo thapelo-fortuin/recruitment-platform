@@ -11,10 +11,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     }
     @Bean public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http .csrf(csrf -> csrf.disable()) .authorizeHttpRequests(auth -> auth .requestMatchers("/actuator/**").permitAll() .requestMatchers(org.springframework.http.HttpMethod.GET,
-                "/api/jobs/**").authenticated() .requestMatchers(org.springframework.http.HttpMethod.POST,
-                "/api/jobs").hasRole("RECRUITER") .requestMatchers(org.springframework.http.HttpMethod.PUT,
-                "/api/jobs/**").hasRole("RECRUITER") .anyRequest().authenticated() ) .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+        http .csrf(csrf -> csrf.disable()) .authorizeHttpRequests(auth -> auth .requestMatchers("/health", "/actuator/**", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll() .requestMatchers(org.springframework.http.HttpMethod.GET,
+                "/api/v1/jobs/**").permitAll() .requestMatchers(org.springframework.http.HttpMethod.POST,
+                "/api/v1/jobs").hasRole("RECRUITER") .requestMatchers(org.springframework.http.HttpMethod.PUT,
+                "/api/v1/jobs/**").hasRole("RECRUITER") .anyRequest().authenticated() ) .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 }

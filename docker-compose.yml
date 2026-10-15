@@ -1,4 +1,9 @@
 services:
+  eureka-server:
+    build: ./eureka-server
+    ports:
+      - "8761:8761"
+
   auth-db:
     image: postgres:16
     environment:
@@ -7,6 +12,7 @@ services:
       POSTGRES_PASSWORD: authpass
     ports:
       - "5432:5432"
+
   job-db:
     image: postgres:16
     environment:
@@ -15,6 +21,7 @@ services:
       POSTGRES_PASSWORD: jobpass
     ports:
       - "5433:5432"
+
   application-db:
     image: postgres:16
     environment:
@@ -22,4 +29,111 @@ services:
       POSTGRES_USER: appuser
       POSTGRES_PASSWORD: apppass
     ports:
-        - "5434:5432"
+      - "5434:5432"
+  soc-db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: socdb
+      POSTGRES_USER: socuser
+      POSTGRES_PASSWORD: socpass
+    ports:
+      - "5435:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U socuser -d socdb" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  neo4j:
+    image: neo4j:5
+    environment:
+      NEO4J_AUTH: neo4j/neo4jpassword
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    healthcheck:
+      test: [ "CMD-SHELL", "cypher-shell -u neo4j -p neo4jpassword 'RETURN 1' || exit 1" ]
+      interval: 5s
+      timeout: 10s
+      retries: 20
+      start_period: 30s
+
+  auth-service:
+    build: ./auth-service
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://auth-db:5432/authdb
+      SOC_URL: http://soc-service:8084
+      APP_ADMIN_SETUP_KEY: ${ADMIN_SETUP_KEY:-}
+    depends_on:
+      - auth-db
+      - eureka-server
+
+  job-service:
+    build: ./job-service
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://job-db:5432/jobdb
+      SOC_URL: http://soc-service:8084
+    depends_on:
+      - job-db
+      - eureka-server
+
+  application-service:
+    build: ./application-service
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://application-db:5432/applicationdb
+      AUTH_SERVICE_URL: http://auth-service:8081
+      JOB_SERVICE_URL: http://job-service:8082
+      SOC_URL: http://soc-service:8084
+    depends_on:
+      - application-db
+      - auth-service
+      - job-service
+      - eureka-server
+
+  soc-service:
+    build: ./soc-service
+    ports:
+      - "8084:8084"
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -q --spider http://localhost:8084/health || exit 1" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://soc-db:5432/socdb
+      SPRING_DATASOURCE_USERNAME: socuser
+      SPRING_DATASOURCE_PASSWORD: socpass
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SPRING_NEO4J_URI: bolt://neo4j:7687
+      SPRING_NEO4J_AUTHENTICATION_USERNAME: neo4j
+      SPRING_NEO4J_AUTHENTICATION_PASSWORD: neo4jpassword
+    depends_on:
+      soc-db:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      SOC_URL: http://soc-service:8084
+    depends_on:
+      auth-service:
+        condition: service_started
+      job-service:
+        condition: service_started
+      application-service:
+        condition: service_started
+      eureka-server:
+        condition: service_started
+      soc-service:
+        condition: service_healthy
